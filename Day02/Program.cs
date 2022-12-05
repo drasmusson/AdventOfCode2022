@@ -99,19 +99,13 @@ static Play GetWinningPlay(Play p1) => p1 switch
     Play.Scissor => Play.Rock
 };
 
-static int GetPlayScore(Play v)
+static int GetPlayScore(Play v) => v switch
 {
-    switch (v)
-	{
-		case Play.Rock:
-			return 1;
-		case Play.Paper:
-			return 2;
-		case Play.Scissor:
-			return 3;
-		default: return 0;
-	}
-}
+	Play.Rock => 1,
+	Play.Paper => 2,
+	Play.Scissor => 3
+};
+
 static Play PlayParse(char input) => input switch
 {
 	'A' => Play.Rock,
