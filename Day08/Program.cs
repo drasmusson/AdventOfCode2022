@@ -218,8 +218,6 @@ public record Coord(int X, int Y)
     public Coord GetDownCoord() => this with { Y = Y + 1 };
 }
 
-public record Coord(int X, int Y);
-
 public class Tree
 {
     public bool Visible { get; set; }
