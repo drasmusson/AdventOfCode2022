@@ -196,6 +196,7 @@ TreePatch ParseInputToPatch(string[] input)
 
     var xLength = input[0].Length;
     var yLength = input.Length;
+
     for (int y = 0; y < yLength; y++)
     {
         for (int x = 0; x < xLength; x++)
@@ -216,6 +217,8 @@ public record Coord(int X, int Y)
     public Coord GetRightCoord() => this with { X = X + 1 };
     public Coord GetDownCoord() => this with { Y = Y + 1 };
 }
+
+public record Coord(int X, int Y);
 
 public class Tree
 {
