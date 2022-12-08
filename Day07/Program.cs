@@ -3,15 +3,38 @@
 var input = File.ReadAllLines("Day07.txt").ToList();
 
 PartOne(input);
+PartTwo(input);
 
 void PartOne(List<string> input)
 {
-    input.RemoveAt(0);
+    var mainDir = ParseDir(input);
+    var allDirs = mainDir.GetChildDirs();
 
+    var smallDirs = allDirs.Where(x => x.Size <= 100000).ToList();
+    var smallDirsSizes = smallDirs.Select(x => x.Size).Sum();
+    
+    Console.WriteLine($"Part one: {smallDirsSizes}");
+}
+
+void PartTwo(List<string> input)
+{
+    Dir mainDir = ParseDir(input);
+    var spaceToBeCleared = 30000000 - (70000000 - mainDir.Size);
+    var allDirs = mainDir.GetChildDirs();
+
+    var sizeToRemove = allDirs.Where(x => x.Size >= spaceToBeCleared).Min(x => x.Size);
+
+    Console.WriteLine($"Part two: {sizeToRemove}");
+}
+
+Dir ParseDir(List<string> input)
+{
     var currentDir = new Dir("/", null);
     var isDisplayMode = false;
-    foreach (var cmdLine in input)
-	{
+    for (int i = 1; i < input.Count; i++)
+    {
+        var cmdLine = input[i];
+        
         if (CmdLineIsLsCommand(cmdLine))
         {
             isDisplayMode = true;
@@ -21,7 +44,7 @@ void PartOne(List<string> input)
         if (isDisplayMode && CmdLineIsCommand(cmdLine))
             isDisplayMode = false;
 
-        if(isDisplayMode)
+        if (isDisplayMode)
         {
             if (CmdLineIsDir(cmdLine))
                 currentDir.AddDir(new Dir(cmdLine.Split("dir ")[1], currentDir));
@@ -29,7 +52,8 @@ void PartOne(List<string> input)
             if (CmdLineIsDoc(cmdLine))
             {
                 var docSplit = cmdLine.Split(" ");
-                currentDir.AddDoc(new Doc(long.Parse(docSplit[0]), docSplit[1]));
+                var size = long.Parse(docSplit[0]);
+                currentDir.AddSizeToThisAndParents(size);
             }
         }
 
@@ -39,16 +63,10 @@ void PartOne(List<string> input)
                 currentDir = currentDir.GetParentDir();
             else
                 currentDir = currentDir.GetDir(cmdLine.Split("cd ")[1]);
-
         }
     }
     var mainDir = currentDir.GetOutermostDir();
-    var allDirs = mainDir.GetChildDirs();
-
-    var smallDirs = allDirs.Where(x => x.Size <= 100000).ToList();
-    var smallDirsSizes = smallDirs.Select(x => x.Size).Sum();
-    
-    Console.Write($"Part one: {smallDirsSizes}");
+    return mainDir;
 }
 
 bool CmdLineIsMoveOut(string cmdLine) => cmdLine == "$ cd ..";
@@ -66,23 +84,13 @@ bool CmdLineIsLsCommand(string cmdLine) => cmdLine == "$ ls";
 public class Dir
 {
     public List<Dir> Dirs { get; }
-    public List<Doc> Docs { get; }
     public Dir? ParentDir { get; }
     public string Name { get; }
-    public long Size
-    {
-        get
-        {
-            var dirSize = GetChildDirs().Select(x => x.Size).Sum();
-            var docSize = Docs.Select(x => x.Size).Sum();
-            return docSize + dirSize;
-        }
-    }
+    public long Size { get; internal set;  }
 
     public Dir(string name, Dir? parentFolder)
     {
         Dirs = new List<Dir>();
-        Docs = new List<Doc>();
         Name = name;
         ParentDir = parentFolder;
     }
@@ -90,10 +98,6 @@ public class Dir
     internal void AddDir(Dir dir)
     {
         Dirs.Add(dir);
-    }
-    internal void AddDoc(Doc doc)
-    {
-        Docs.Add(doc);
     }
 
     internal Dir GetDir(string dirName)
@@ -106,6 +110,15 @@ public class Dir
         return ParentDir;
     }
 
+    internal void AddSizeToThisAndParents(long size)
+    {
+        Size += size;
+
+        if (ParentDir is null)
+            return;
+
+        ParentDir.AddSizeToThisAndParents(size);
+    }
 
     internal Dir GetOutermostDir()
     {
@@ -121,17 +134,5 @@ public class Dir
         var childDirs = Dirs.SelectMany(x => x.GetChildDirs()).ToList();
         dirs.AddRange(childDirs);
         return dirs;
-    }
-}
-
-public class Doc
-{
-    public long Size { get; }
-    public string Name { get; }
-
-    public Doc(long size, string name)
-    {
-        Size = size;
-        Name = name;
     }
 }
