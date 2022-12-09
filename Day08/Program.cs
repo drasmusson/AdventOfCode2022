@@ -31,7 +31,6 @@ void PartOne(string[] input)
     var rightEdge = treePatch.GetRightEdge();
     foreach (var coord in rightEdge)
     {
-
         LookLeftUntilEdgeFromCoord(treePatch, coord);
     }
     
@@ -53,6 +52,12 @@ void PartTwo(string[] input)
 
         treePatch.Map[coord].ViewingScore = up * left * right * down;
     }
+
+    treePatch.SetOuteredgesTo(0);
+
+    var maxViewScore = treePatch.Map.Values.Max(x => x.ViewingScore);
+
+    Console.WriteLine($"Part two: {maxViewScore}");
 }
 
 int GetUpViewDistansFromCoord(TreePatch treePatch, Coord coord)
@@ -266,5 +271,28 @@ public class TreePatch
         var highestY = Map.Select(x => x.Key).Max(c => c.Y);
 
         return Map.Select(x => x.Key).Where(c => c.Y == highestY).ToList();
+    }
+
+    internal void SetOuteredgesTo(int v)
+    {
+        var outerBotCoords = GetBottomEdge();
+
+        foreach (var outerCoord in outerBotCoords)
+            Map[outerCoord].ViewingScore = v;
+
+        var outerTopCoords = GetTopEdge();
+
+        foreach (var outerCoord in outerBotCoords)
+            Map[outerCoord].ViewingScore = v;
+
+        var outerLeftCoords = GetLeftEdge();
+
+        foreach (var outerCoord in outerLeftCoords)
+            Map[outerCoord].ViewingScore = v;
+
+        var outerRightCoords = GetRightEdge();
+
+        foreach (var outerCoord in outerRightCoords)
+            Map[outerCoord].ViewingScore = v;
     }
 }
