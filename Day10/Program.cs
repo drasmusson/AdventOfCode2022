@@ -1,9 +1,5 @@
 ﻿// https://adventofcode.com/2022/day/10
 
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Text;
 
 var input = File.ReadAllLines("Day10.txt");
