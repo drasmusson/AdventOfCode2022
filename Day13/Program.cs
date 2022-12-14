@@ -1,18 +1,116 @@
 ﻿// https://adventofcode.com/2022/day/13
 
+using System;
+
 var input = File.ReadAllLines("Day13.txt");
 
 PartOne(input);
+PartTwo(input);
 
 void PartOne(string[] input)
 {
     var pairs = GetPairs(input);
+    var items = ParsePairs(pairs);
 
-    var indexes = SolveProblem(pairs);
-
+    var indexes = ComparePairs(items);
     var answer = indexes.Sum();
     Console.WriteLine($"Part one: {answer}");
 }
+
+void PartTwo(string[] input)
+{
+    var inputList = input.ToList();
+
+    inputList.RemoveAll(x => string.IsNullOrWhiteSpace(x));
+
+    var divider1 = ParseListItem("[[2]]", out _);
+    var divider2 = ParseListItem("[[6]]", out _);
+
+    var items = inputList.Select(x => ParseListItem(x, out _)).ToList();
+    items.Add(divider1);
+    items.Add(divider2);
+    var a = items.ToArray();
+    Array.Sort(a, Compare);
+    Array.Reverse(a);
+
+    var i1 = Array.IndexOf(a, divider1);
+    var i2 = Array.IndexOf(a, divider2);
+    Console.WriteLine($"Part one: {(i1 + 1) * (i2 + 1)}");
+}
+
+int Compare(ListItem a, ListItem b)
+{
+    var cr = a.CompareListItems(b);
+
+    if (cr == CompareResult.Equal || cr == CompareResult.Correct) return 1;
+
+    return -1;
+}
+
+List<int> ComparePairs(List<ListItem> items)
+{
+    var result = new List<int>();
+    for (int i = 0; i < items.Count; i+=2)
+    {
+        var cr = items[i].CompareListItems(items[i + 1]);
+        if (cr == CompareResult.Correct) result.Add(i / 2 + 1);
+    }
+    return result;
+}
+
+List<ListItem> ParsePairs(List<(string Left, string Right)> pairs)
+{
+    var listItems = new List<ListItem>();
+
+    foreach (var pair in pairs)
+    {
+        listItems.Add(ParseListItem(pair.Left, out _));
+        listItems.Add(ParseListItem(pair.Right, out _));
+    }
+    return listItems;
+}
+
+ListItem ParseListItem(string input, out string rest)
+{
+    var result = new List<Item>();
+    input = CutFirstChar(input);
+    var end = false;
+    while(input.Length > 0 && !end)
+    {
+        var c = input[0];
+        switch (c)
+        {
+            case ']':
+                end = true;
+                break;
+            case ',':
+                input = CutFirstChar(input);
+                break;
+            default:
+                result.Add(ParseItem(input, out input));
+                break;
+        }
+    }
+    rest = CutFirstChar(input);
+
+    return new ListItem(result);
+}
+
+NumberItem ParseNumberItem(string input, out string rest)
+{
+    var i = input.IndexOfAny(new char[] {',',']'});
+    rest = input.Substring(i);
+    var value = int.Parse(input[..i]);
+    return new NumberItem(value);
+}
+
+Item ParseItem(string input, out string rest) => input[0] switch
+{
+    '[' => ParseListItem(input, out rest),
+    _ => ParseNumberItem(input, out rest)
+};
+
+string CutFirstChar(string input) => input.Length > 0 ? input.Substring(1, input.Length - 1) : "";
 
 List<(string Left, string Right)> GetPairs(string[] input)
 {
@@ -26,147 +124,84 @@ List<(string Left, string Right)> GetPairs(string[] input)
     return list;
 }
 
-List<int> SolveProblem(List<(string Left, string Right)> pairs)
+record NumberItem(int Value) : Item
 {
-    var indexes = new List<int>();
-
-    for (int i = 0; i < pairs.Count; i++)
+    public ListItem ToListItem()
     {
-        if (Compare(pairs[i].Left, pairs[i].Right).Value)
-            indexes.Add(i + 1);
+        return new ListItem(new List<Item> { this });
     }
 
-    return indexes;
-}
-
-bool ComparePair((string Left, string Right) pair)
-{
-    var originalPair = pair;
-
-    if (IsList(pair.Left) && IsList(pair.Right))
-    {
-
-    }
-    return true;
-}
-bool? Compare(string left, string right)
-{
-    var leftIsList = IsList(left);
-    var rightIsList = IsList(right);
-
-    if (leftIsList && rightIsList)
-    {
-        var subpackageLeft = GetFirstSubPackage(left);
-        var subpackageRight = GetFirstSubPackage(right);
-
-        var compareResult = Compare(GetFirstSubPackage(left), GetFirstSubPackage(right));
-        if (compareResult != null) return compareResult;
-
-        var lSubIndex = left.IndexOf(subpackageLeft);
-        var rSubIndex = right.IndexOf(subpackageRight);
-
-        left = left.Remove(lSubIndex - 1, subpackageLeft.Length + 2);
-        right = right.Remove(rSubIndex - 1, subpackageRight.Length + 2);
-    }
-
-    if (leftIsList && !rightIsList)
-    {
-        var rC = ConvertToList(right);
-        var subpackageLeft = GetFirstSubPackage(left);
-        var subpackageRight = GetFirstSubPackage(right);
-
-        var compareResult = Compare(GetFirstSubPackage(left), GetFirstSubPackage(right));
-        if (compareResult != null) return compareResult;
-
-        var lSubIndex = left.IndexOf(subpackageLeft);
-        var rSubIndex = right.IndexOf(subpackageRight);
-
-        left = left.Remove(lSubIndex - 1, subpackageLeft.Length + 2);
-        right = right.Remove(rSubIndex - 1, subpackageRight.Length + 2);
-    }
-
-    if (!leftIsList && rightIsList)
-    {
-        var lC = ConvertToList(left);
-        var subpackageLeft = GetFirstSubPackage(left);
-        var subpackageRight = GetFirstSubPackage(right);
-
-        var compareResult = Compare(GetFirstSubPackage(left), GetFirstSubPackage(right));
-        if (compareResult != null) return compareResult;
-
-        var lSubIndex = left.IndexOf(subpackageLeft);
-        var rSubIndex = right.IndexOf(subpackageRight);
-
-        left = left.Remove(lSubIndex - 1, subpackageLeft.Length + 2);
-        right = right.Remove(rSubIndex - 1, subpackageRight.Length + 2); ;
-    }
-
-    var leftList = left.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
-    var rightList = right.Split(",", StringSplitOptions.RemoveEmptyEntries).ToList();
-    while (leftList.Any() && rightList.Any())
-    {
-        var lC = leftList.First();
-        var rC = rightList.First();
-
-        if (IsList(lC) || IsList(rC))
+    public CompareResult CompareNumberItems(NumberItem otherNum) =>
+        (this.Value, otherNum.Value) switch
         {
-            left = String.Join(",", leftList);
-            right = String.Join(",", rightList);
+            (var a, var b) when a == b => CompareResult.Equal,
+            (var a, var b) when a < b => CompareResult.Correct,
+            (var a, var b) when a > b => CompareResult.Incorrect,
+            _ => throw new InvalidOperationException()
+        };
+}
 
-            var compareResult = Compare(left, right);
-            if (compareResult != null) return compareResult;
+record ListItem(List<Item> Items) : Item
+{
+    public override string ToString()
+    {
+        return $"ListItem. Count: {Items.Count}";
+    }
+
+    public CompareResult CompareListItems(ListItem otherList)
+    {
+        var iter = Items.Count < otherList.Items.Count ? Items.Count : otherList.Items.Count;
+
+        for (int i = 0; i < iter; i++)
+        {
+            var cr = Items[i].CompareTo(otherList.Items[i]);
+            if (cr != CompareResult.Equal)
+                return cr;
         }
 
-        var l = int.Parse(leftList.First());
-        var r = int.Parse(rightList.First());
+        if (Items.Count < otherList.Items.Count) return CompareResult.Correct;
+        if (Items.Count > otherList.Items.Count) return CompareResult.Incorrect;
 
-        if (l < r) return true;
-
-        if (l > r) return false;
-
-        leftList.RemoveAt(0);
-        rightList.RemoveAt(0);
+        return CompareResult.Equal;
     }
-
-    if (!leftList.Any() && !rightList.Any()) return null;
-
-    return rightList.Any();
 }
 
-string ConvertToList(string input)
+record Item
 {
-    return string.IsNullOrEmpty(input) ? $"[]" : $"[{input[0]}]";
-}
-
-string GetFirstSubPackage(string package)
-{
-    if (string.IsNullOrEmpty(package) || package[0] != '[') return package;
-
-    var startBrackets = 0;
-    var i = 0;
-    do
+    public CompareResult CompareTo(Item other)
     {
-        var c = package[i];
-
-        switch (c)
+        if (this is ListItem && other is ListItem)
         {
-            case '[':
-                startBrackets++;
-                break;
-            case ']':
-                startBrackets--;
-                break;
-            default:
-                break;
+            var tList = (ListItem)this;
+            return tList.CompareListItems((ListItem)other);
         }
-        i++;
-    } while (startBrackets != 0);
+        if (this is NumberItem && other is NumberItem)
+        {
+            var num = (NumberItem)this;
+            return num.CompareNumberItems((NumberItem)other);
+        }
+        if (this is ListItem && other is NumberItem)
+        {
+            var tList = (ListItem)this;
+            var oNum = (NumberItem)other;
+            var oList = oNum.ToListItem();
 
-    return package.Substring(1, i - 2);
+            return tList.CompareListItems(oList);
+        }
+        if (this is NumberItem && other is ListItem)
+        {
+            var tNum = (NumberItem)this;
+            var tList = tNum.ToListItem();
+
+            return tList.CompareListItems((ListItem)other);
+        }
+        return 0;
+    }
 }
 
-static string RemoveOuterBrackets(string package) => package.Substring(1, package.Length - 2);
-
-static bool IsList(string package) => !string.IsNullOrEmpty(package) && package[0] == '[';
-
-
+enum CompareResult
+{
+    Equal,
+    Correct,
+    Incorrect
+}
