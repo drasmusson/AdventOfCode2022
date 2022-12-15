@@ -29,6 +29,7 @@ void PartTwo(string[] input)
     var items = inputList.Select(x => ParseListItem(x, out _)).ToList();
     items.Add(divider1);
     items.Add(divider2);
+
     var a = items.ToArray();
     Array.Sort(a, Compare);
     Array.Reverse(a);
@@ -168,35 +169,15 @@ record ListItem(List<Item> Items) : Item
 
 record Item
 {
-    public CompareResult CompareTo(Item other)
-    {
-        if (this is ListItem && other is ListItem)
+    public CompareResult CompareTo(Item otherNum) =>
+        (this, otherNum) switch
         {
-            var tList = (ListItem)this;
-            return tList.CompareListItems((ListItem)other);
-        }
-        if (this is NumberItem && other is NumberItem)
-        {
-            var num = (NumberItem)this;
-            return num.CompareNumberItems((NumberItem)other);
-        }
-        if (this is ListItem && other is NumberItem)
-        {
-            var tList = (ListItem)this;
-            var oNum = (NumberItem)other;
-            var oList = oNum.ToListItem();
-
-            return tList.CompareListItems(oList);
-        }
-        if (this is NumberItem && other is ListItem)
-        {
-            var tNum = (NumberItem)this;
-            var tList = tNum.ToListItem();
-
-            return tList.CompareListItems((ListItem)other);
-        }
-        return 0;
-    }
+            (ListItem left, ListItem right) => left.CompareListItems(right),
+            (NumberItem left, NumberItem right) => left.CompareNumberItems(right),
+            (ListItem left, NumberItem right) => left.CompareListItems(right.ToListItem()),
+            (NumberItem left, ListItem right) => left.ToListItem().CompareListItems(right),
+            _ => throw new InvalidOperationException()
+        };
 }
 
 enum CompareResult
