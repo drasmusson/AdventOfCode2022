@@ -1,8 +1,13 @@
 ﻿// https://adventofcode.com/2022/day/15
 
+using System.Drawing;
+using System;
+using System.Diagnostics;
+using System.Timers;
+
 var input = File.ReadAllLines("Day15.txt");
 
-//PartOne(input);
+PartOne(input);
 PartTwo(input);
 
 void PartOne(string[] input)
@@ -17,17 +22,22 @@ void PartOne(string[] input)
 void PartTwo(string[] input)
 {
 	var sensors = ParseToSensors(input);
+	var sc = new Stopwatch();
+	sc.Start();
 	var beacon = FindBeacon(sensors);
-	Console.WriteLine($"Part two: {9}");
+	sc.Stop();
+	Console.WriteLine(sc.ElapsedMilliseconds / 100);
+	var answer = CalculateTuningFrequency(beacon);
+	Console.WriteLine($"Part two: {answer}");
 }
 
 Coord FindBeacon(List<Sensor> sensors)
 {
 	foreach (var sensor in sensors)
 	{
-		foreach (var edgeCoord in sensor.GetEdgeCoords(0, 20))
+		foreach (var edgeCoord in sensor.GetEdgeCoords(0, 4000000))
 		{
-			if (NotInRange(sensors, edgeCoord))
+			if (!InRange(sensors, edgeCoord))
 			{
 				return edgeCoord;
 			}
@@ -36,27 +46,21 @@ Coord FindBeacon(List<Sensor> sensors)
 	return new Coord(0, 0);
 }
 
-bool NotInRange(List<Sensor> sensors, Coord coord)
+bool InRange(List<Sensor> sensors, Coord coord)
 {
-	var withinRange = true;
-
 	foreach (var sensor in sensors)
 	{
-		if (!sensor.IsCoordWithinRange(coord))
+		if (sensor.IsCoordWithinRange(coord))
 		{
-            withinRange = false;
-		}
-		else
-		{
-			withinRange = true;
+			return true;
 		}
 	}
-	return withinRange;
+	return false;
 }
 
 long CalculateTuningFrequency(Coord beacon)
 {
-	return beacon.X * 4000000 + beacon.Y;
+	return (long)beacon.X * (long)4000000 + (long)beacon.Y;
 }
 
 //Coord Search(List<Coord> coordsToSearchFor, List<Sensor> sensors)
@@ -150,44 +154,36 @@ class Sensor
 		return coords;
 	}
 
-	public List<Coord> GetEdgeCoords(int min, int max)
+	public HashSet<Coord> GetEdgeCoords(int min, int max)
 	{
-		var edgeCoords = new List<Coord>();
+        var coords = new HashSet<Coord>();
+		var outerEdgeDist = Range + 1;
 
-		var edgeDistance = Range + 1;
+		int minx = Position.X - outerEdgeDist;
+		int maxx = Position.X + outerEdgeDist;
+		int miny = Position.Y - outerEdgeDist;
+		int maxy = Position.Y + outerEdgeDist;
 
-		for (int i = -edgeDistance; i <= edgeDistance; i++)
-		{
-			var y1 = Position.Y - edgeDistance;
-			var y2 = Position.Y + edgeDistance;
-			var x = Position.X + i;
+        for (int i = minx; i <= maxx; i++)
+        {
+			var x = i;
+			var y1 = Position.Y + (outerEdgeDist - Math.Abs(i - Position.X));
+			var y2 = Position.Y - (outerEdgeDist - Math.Abs(i - Position.X));
 
-            if (y1 >= min && y1 <= max &&
-				y2 >= min && y2 <= max &&
-                x >= min && x <= max)
+			if (x >= min && x <= max &&
+				y1 >= min && y1 <= max)
 			{
-				edgeCoords.Add(new Coord(x, y1));
-				edgeCoords.Add(new Coord(x, y2));
+				coords.Add(new Coord(x, y1));
 			}
-		}
-
-		for (int i = -edgeDistance; i < edgeDistance; i++)
-		{
-            var x1 = Position.X - edgeDistance;
-            var x2 = Position.X + edgeDistance;
-            var y = Position.Y + i;
-
-            if (x1 >= min && x1 <= max &&
-                x2 >= min && x2 <= max &&
-                y >= min && y <= max)
-            {
-                edgeCoords.Add(new Coord(x1, y));
-                edgeCoords.Add(new Coord(x2, y));
-            }
+			if (x >= min && x <= max &&
+				y2 >= min && y2 <= max)
+			{
+				coords.Add(new Coord(x, y2));
+			}
         }
 
-		return edgeCoords;
-	}
+        return coords;
+    }
 
     public bool IsCoordWithinRange(Coord other)
     {
