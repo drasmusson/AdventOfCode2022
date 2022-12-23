@@ -13,34 +13,72 @@ void PartOne(string[] input)
     Console.WriteLine($"Part one: {answer}");
 }
 
-//void PartTwo(string[] input)
-//{
-//    var rockDropper = new RockDropper(input[0]);
-//    rockDropper.DropRocks(1000000000000);
-//    var answer = rockDropper.Chamber.HighestPoint.Y;
-//    Console.WriteLine($"Part two: {answer}");
-//}
+void PartTwo(string[] input)
+{
+    var rockDropper = new RockDropper(input[0]);
+    var answer = rockDropper.DropRocks(1000000000000);
+    Console.WriteLine($"Part two: {answer}");
+}
 
 class RockDropper
 {
     public Chamber Chamber { get; private set; }
     private string JetPattern { get; set; }
-    private int Iteration { get; set; }
+    private long Iterations { get; set; }
+    private List<int> PreviousJetIndexes { get; set; }
+    private (int Height, long RockCount) RepeatSection { get; set; }
+    private int? RepeatIndex { get; set; }
+    private int CurrentJetIndex { get; set; }
+    private bool JetWrapped { get; set; }
+    private (int Height, long RockCount) Bottom { get; set; }
+    private long RocksToDrop { get; set; }
     public RockDropper(string jetPattern)
     {
         Chamber = new Chamber();
         JetPattern = jetPattern;
-        Iteration = 0;
+        Iterations = 0;
+        PreviousJetIndexes = new List<int>();
     }
 
-    public void DropRocks(long rocks)
+    public long DropRocks(long rocks)
     {
-        for (int i = 0; i < rocks; i++)
-        {
-            var rock = CreateRock(i % 5, GetNewStartingCoord());
+        RocksToDrop = rocks;
 
+        for (long i = 0; i < rocks; i++)
+        {
+            var rockType = i % 5;
+            var rock = CreateRock((int)rockType, GetNewStartingCoord());
+            JetWrapped = false;
             DropRock(rock);
+
+            // this works for test input but my input wrappes at rock type 2 every time.
+            if (JetWrapped && (i + 1) % 5 == 0)
+            {
+                if (RepeatIndex is null)
+                {
+                    if (PreviousJetIndexes.Contains(CurrentJetIndex))
+                    {
+                        Bottom = (Chamber.HighestPoint.Y, i);
+                        RepeatIndex = CurrentJetIndex;
+                    }
+                    else
+                    {
+                        PreviousJetIndexes.Add(CurrentJetIndex);
+                    }
+                }
+                else if (CurrentJetIndex == RepeatIndex)
+                {
+                    RepeatSection = (Chamber.HighestPoint.Y - Bottom.Height, i - Bottom.RockCount);
+                    rocks = i + (rocks - Bottom.RockCount) % RepeatSection.RockCount;
+                }
+            }
         }
+
+        var restHeight = Chamber.HighestPoint.Y - Bottom.Height - RepeatSection.Height;
+        var repeats = RepeatSection.RockCount > 0 ? ((RocksToDrop - Bottom.RockCount) / RepeatSection.RockCount) : 0;
+
+        long height = Bottom.Height + repeats * RepeatSection.Height + restHeight;
+        return height;
     }
 
     void DropRock(Rock rock)
@@ -49,7 +87,11 @@ class RockDropper
 
         while (rockIsFalling)
         {
-            var direction = JetPattern[Iteration % JetPattern.Length];
+            CurrentJetIndex = (int)(Iterations % JetPattern.Length);
+            if (CurrentJetIndex == 0)
+                JetWrapped = true;
+
+            var direction = JetPattern[CurrentJetIndex];
 
             rock.MoveInDirection(direction);
             if (Chamber.IsIntersecting(rock.Body))
@@ -62,7 +104,7 @@ class RockDropper
                 Chamber.AddRock(rock.Body);
                 rockIsFalling = false;
             }
-            Iteration++;
+            Iterations++;
         }
     }
 
@@ -89,17 +131,17 @@ public record Coord(int X, int Y);
 class Chamber
 {
     public Dictionary<Coord, string> Map { get; private set; }
-    public Coord HighestPoint => Map.Keys.OrderByDescending(x => x.Y).First();
+    public Coord HighestPoint => Map.Keys.Any() ? Map.Keys.OrderByDescending(x => x.Y).First() : new Coord(0,0);
 
     public Chamber()
     {
         Map = new Dictionary<Coord, string>();
 
-        for (int i = 0; i < 7; i++)
-        {
-            var coord = new Coord(i, 0);
-            Map[coord] = "-";
-        }
+        //for (int i = 0; i < 7; i++)
+        //{
+        //    var coord = new Coord(i, 0);
+        //    Map[coord] = "-";
+        //}
     }
 
     public bool IsIntersecting(List<Coord> rock)
@@ -118,6 +160,7 @@ class Chamber
     {
         if (coord.X < 0) return true;
         if (coord.X > 6) return true;
+        if (coord.Y < 1) return true;
 
         return false;
     }
