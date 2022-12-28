@@ -9,6 +9,38 @@ PartOne(input);
 void PartOne(string[] input)
 {
     var blueprints = ParseBlueprints(input);
+
+    
+}
+
+int GetMaxGeodes(int timeleft, Blueprint blueprint)
+{
+    var seenStates = new HashSet<State>();
+    var queue = new Queue<State>();
+
+    queue.Enqueue(
+        new State(
+            timeleft,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        ));
+
+    var currentBest = 0;
+
+    while (queue.TryDequeue(out var state))
+    {
+        currentBest = currentBest > state.Geode ? currentBest : state.Geode;
+
+        if (state.Timeleft == 0) continue;
+
+        queue.Enqueue(state);
+    }
 }
 
 List<Blueprint> ParseBlueprints(string[] input)
@@ -21,14 +53,27 @@ List<Blueprint> ParseBlueprints(string[] input)
 
         blueprints.Add(new Blueprint(
             nums[0],
-            new Robot(Unit.Ore, new List<(Unit, int)> { (Unit.Ore, nums[1]) }),
-            new Robot(Unit.Clay, new List<(Unit, int)> { (Unit.Ore, nums[2]) }),
-            new Robot(Unit.Obsidian, new List<(Unit, int)> { (Unit.Ore, nums[3]), (Unit.Clay, nums[4]) }),
-            new Robot(Unit.Geode, new List<(Unit, int)> { (Unit.Ore, nums[5]), (Unit.Obsidian, nums[6]) })
+            new Robot(Unit.Ore, new List<Material> { new Material(Unit.Ore, nums[1]) }),
+            new Robot(Unit.Clay, new List<Material> { new Material(Unit.Ore, nums[2]) }),
+            new Robot(Unit.Obsidian, new List<Material> { new Material(Unit.Ore, nums[3]), new Material(Unit.Clay, nums[4]) }),
+            new Robot(Unit.Geode, new List<Material> { new Material(Unit.Ore, nums[5]), new Material(Unit.Obsidian, nums[6]) })
             )
         );
     }
     return blueprints;
+}
+
+record State(
+    int Timeleft,
+    int Ore,
+    int Clay,
+    int Obsidian,
+    int Geode,
+    int OreRobots,
+    int ClayRobots,
+    int ObsidianRobots,
+    int GeodeRobots)
+{
 }
 
 class Blueprint
@@ -43,10 +88,9 @@ class Blueprint
     }
 }
 
-record Robot(
-    Unit Production,
-    List<(Unit, int)> Cost
-);
+record Robot(Unit Production, List<Material> Cost);
+
+record Material(Unit Unit, int Quantity);
 
 enum Unit
 {
