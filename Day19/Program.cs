@@ -48,6 +48,8 @@ int GetMaxGeodes(int timeleft, Blueprint blueprint)
 
         if (state.Timeleft == 0) continue;
 
+        if (BestPossibleGeodeScore(state) < currentBest) continue;
+
         if (state.Ore >= blueprint.OreRobotCost)
         {
             var newState = state.Increase().AddRobot(blueprint, Robot.Ore);
@@ -92,6 +94,11 @@ int GetMaxGeodes(int timeleft, Blueprint blueprint)
         queue.Enqueue(newS);
     }
     return currentBest;
+}
+
+int BestPossibleGeodeScore(State state)
+{
+    return state.Geode + state.GeodeRobots * state.Timeleft + (state.Timeleft * (state.Timeleft - 1)) / 2;
 }
 
 List<Blueprint> ParseBlueprints(string[] input)
