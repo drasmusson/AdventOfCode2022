@@ -1,5 +1,6 @@
 ﻿// https://adventofcode.com/2022/day/19
 
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 var input = File.ReadAllLines("Day19.txt");
@@ -10,7 +11,15 @@ void PartOne(string[] input)
 {
     var blueprints = ParseBlueprints(input);
 
-    
+    foreach (var blueprint in blueprints)
+    {
+        blueprint.Max = GetMaxGeodes(24, blueprint);
+    }
+
+    var bestBlueprint = blueprints.OrderByDescending(x => x.Max).First();
+    var answer = bestBlueprint.Id * bestBlueprint.Max;
+
+    Console.WriteLine($"Part one: {answer}");
 }
 
 int GetMaxGeodes(int timeleft, Blueprint blueprint)
@@ -25,7 +34,7 @@ int GetMaxGeodes(int timeleft, Blueprint blueprint)
             0,
             0,
             0,
-            0,
+            1,
             0,
             0,
             0
@@ -39,8 +48,50 @@ int GetMaxGeodes(int timeleft, Blueprint blueprint)
 
         if (state.Timeleft == 0) continue;
 
-        queue.Enqueue(state);
+        if (state.Ore >= blueprint.OreRobotCost)
+        {
+            var newState = state.Increase().AddRobot(blueprint, Robot.Ore);
+            if (!seenStates.Contains(newState))
+            {
+                queue.Enqueue(newState);
+            }
+            seenStates.Add(newState);
+        }
+
+        if (state.Ore >= blueprint.ClayRobotCost)
+        {
+            var newState = state.Increase().AddRobot(blueprint, Robot.Clay);
+            if (!seenStates.Contains(newState))
+            {
+                queue.Enqueue(newState);
+            }
+            seenStates.Add(newState);
+        }
+
+        if (state.Ore >= blueprint.ObsidianRobotCost.Ore && state.Clay >= blueprint.ObsidianRobotCost.Clay)
+        {
+            var newState = state.Increase().AddRobot(blueprint, Robot.Obsidian);
+            if (!seenStates.Contains(newState))
+            {
+                queue.Enqueue(newState);
+            }
+            seenStates.Add(newState);
+        }
+
+        if (state.Ore >= blueprint.GeodeRobotCost.Ore && state.Obsidian >= blueprint.GeodeRobotCost.Obsidian)
+        {
+            
+            var newState = state.Increase().AddRobot(blueprint, Robot.Geode);
+            if (!seenStates.Contains(newState))
+            {
+                queue.Enqueue(newState);
+            }
+            seenStates.Add(newState);
+        }
+        var newS = state.Increase();
+        queue.Enqueue(newS);
     }
+    return currentBest;
 }
 
 List<Blueprint> ParseBlueprints(string[] input)
@@ -53,10 +104,10 @@ List<Blueprint> ParseBlueprints(string[] input)
 
         blueprints.Add(new Blueprint(
             nums[0],
-            new Robot(Unit.Ore, new List<Material> { new Material(Unit.Ore, nums[1]) }),
-            new Robot(Unit.Clay, new List<Material> { new Material(Unit.Ore, nums[2]) }),
-            new Robot(Unit.Obsidian, new List<Material> { new Material(Unit.Ore, nums[3]), new Material(Unit.Clay, nums[4]) }),
-            new Robot(Unit.Geode, new List<Material> { new Material(Unit.Ore, nums[5]), new Material(Unit.Obsidian, nums[6]) })
+            nums[1],
+            nums[2],
+            (nums[3], nums[4]),
+            (nums[5], nums[6])
             )
         );
     }
@@ -74,25 +125,52 @@ record State(
     int ObsidianRobots,
     int GeodeRobots)
 {
+    public State AddRobot(Blueprint blueprint, Robot robot) => robot switch
+    {
+        Robot.Ore => this with { Ore = Ore - blueprint.OreRobotCost, OreRobots = OreRobots + 1 },
+        Robot.Clay => this with { Ore = Ore - blueprint.ClayRobotCost, ClayRobots = ClayRobots + 1 },
+        Robot.Obsidian => this with { Ore = Ore - blueprint.ObsidianRobotCost.Ore, Clay = Clay - blueprint.ObsidianRobotCost.Clay, ObsidianRobots = ObsidianRobots + 1 },
+        Robot.Geode => this with { Ore = Ore - blueprint.GeodeRobotCost.Ore, Obsidian = Obsidian - blueprint.GeodeRobotCost.Obsidian, GeodeRobots = GeodeRobots + 1 }
+    };
+
+
+    public State Increase()
+    {
+        return this with
+        {
+            Timeleft = Timeleft - 1,
+            Ore = Ore + OreRobots,
+            Clay = Clay + ClayRobots,
+            Obsidian = Obsidian + ObsidianRobots,
+            Geode = Geode + GeodeRobots
+        };
+    }
 }
 
 class Blueprint
 {
-    public int Id { get; private set; }
-    public Robot[] Robots { get; private set; }
+    public int Max { get; set; }
+    public int Id { get; }
+    public int OreRobotCost { get; }
+    public int ClayRobotCost { get; }
+    public (int Ore, int Clay) ObsidianRobotCost { get; }
+    public (int Ore, int Obsidian) GeodeRobotCost { get; }
 
-    public Blueprint(int id, params Robot[] robots)
+    public Blueprint(int id, int oreRobotCost, int clayRobotCost, (int Ore, int Clay) obsidianRobotCost, (int Ore, int Obsidian) geodeRobotCost)
     {
         Id = id;
-        Robots = robots;
+        OreRobotCost = oreRobotCost;
+        ClayRobotCost = clayRobotCost;
+        ObsidianRobotCost = obsidianRobotCost;
+        GeodeRobotCost = geodeRobotCost;
     }
 }
 
-record Robot(Unit Production, List<Material> Cost);
+//record Robot(Unit Production, List<Material> Cost);
 
-record Material(Unit Unit, int Quantity);
+//record Material(Unit Unit, int Quantity);
 
-enum Unit
+enum Robot
 {
     Ore,
     Clay,
