@@ -1,7 +1,6 @@
 ﻿// https://adventofcode.com/2022/day/19
 
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 var input = File.ReadAllLines("Day19.txt");
@@ -12,15 +11,10 @@ PartTwo(input);
 void PartOne(string[] input)
 {
     var blueprints = ParseBlueprints(input);
-    var sc = new Stopwatch();
-    sc.Start();
     foreach (var blueprint in blueprints)
     {
         blueprint.Max = GetMaxGeodes(24, blueprint);
-        Console.WriteLine("One bp done in: " + sc.ElapsedMilliseconds);
-        sc.Restart();
     }
-    sc.Stop();
     var answer = blueprints.Sum(b => b.Max * b.Id);
 
     Console.WriteLine($"Part one: {answer}");
@@ -30,15 +24,10 @@ void PartTwo(string[] input)
 {
     var blueprints = input.Length == 2 ? ParseBlueprints(input) : ParseBlueprints(input[..3]);
 
-    var sc = new Stopwatch();
-    sc.Start();
     foreach (var blueprint in blueprints)
     {
         blueprint.Max = GetMaxGeodes(32, blueprint);
-        Console.WriteLine("One bp done in: " + sc.ElapsedMilliseconds);
-        sc.Restart();
     }
-    sc.Stop();
     var answer = blueprints.Select(x => x.Max).Aggregate((a, b) => a * b);
 
     Console.WriteLine($"Part two: {answer}");
