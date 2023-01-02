@@ -1,6 +1,5 @@
 ﻿// https://adventofcode.com/2022/day/19
 
-using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 var input = File.ReadAllLines("Day19.txt");
