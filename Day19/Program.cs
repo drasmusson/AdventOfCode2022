@@ -1,25 +1,47 @@
 ﻿// https://adventofcode.com/2022/day/19
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 var input = File.ReadAllLines("Day19.txt");
 
 PartOne(input);
+PartTwo(input);
 
 void PartOne(string[] input)
 {
     var blueprints = ParseBlueprints(input);
-
+    var sc = new Stopwatch();
+    sc.Start();
     foreach (var blueprint in blueprints)
     {
         blueprint.Max = GetMaxGeodes(24, blueprint);
+        Console.WriteLine("One bp done in: " + sc.ElapsedMilliseconds);
+        sc.Restart();
     }
-
-    var bestBlueprint = blueprints.OrderByDescending(x => x.Max).First();
-    var answer = bestBlueprint.Id * bestBlueprint.Max;
+    sc.Stop();
+    var answer = blueprints.Sum(b => b.Max * b.Id);
 
     Console.WriteLine($"Part one: {answer}");
+}
+
+void PartTwo(string[] input)
+{
+    var blueprints = input.Length == 2 ? ParseBlueprints(input) : ParseBlueprints(input[..3]);
+
+    var sc = new Stopwatch();
+    sc.Start();
+    foreach (var blueprint in blueprints)
+    {
+        blueprint.Max = GetMaxGeodes(32, blueprint);
+        Console.WriteLine("One bp done in: " + sc.ElapsedMilliseconds);
+        sc.Restart();
+    }
+    sc.Stop();
+    var answer = blueprints.Select(x => x.Max).Aggregate((a, b) => a * b);
+
+    Console.WriteLine($"Part two: {answer}");
 }
 
 int GetMaxGeodes(int timeleft, Blueprint blueprint)
@@ -47,42 +69,11 @@ int GetMaxGeodes(int timeleft, Blueprint blueprint)
         currentBest = currentBest > state.Geode ? currentBest : state.Geode;
 
         if (state.Timeleft == 0) continue;
-
         if (BestPossibleGeodeScore(state) < currentBest) continue;
-
-        if (state.Ore >= blueprint.OreRobotCost)
-        {
-            var newState = state.Increase().AddRobot(blueprint, Robot.Ore);
-            if (!seenStates.Contains(newState))
-            {
-                queue.Enqueue(newState);
-            }
-            seenStates.Add(newState);
-        }
-
-        if (state.Ore >= blueprint.ClayRobotCost)
-        {
-            var newState = state.Increase().AddRobot(blueprint, Robot.Clay);
-            if (!seenStates.Contains(newState))
-            {
-                queue.Enqueue(newState);
-            }
-            seenStates.Add(newState);
-        }
-
-        if (state.Ore >= blueprint.ObsidianRobotCost.Ore && state.Clay >= blueprint.ObsidianRobotCost.Clay)
-        {
-            var newState = state.Increase().AddRobot(blueprint, Robot.Obsidian);
-            if (!seenStates.Contains(newState))
-            {
-                queue.Enqueue(newState);
-            }
-            seenStates.Add(newState);
-        }
+        if (currentBest - state.Geode >= 3) continue;
 
         if (state.Ore >= blueprint.GeodeRobotCost.Ore && state.Obsidian >= blueprint.GeodeRobotCost.Obsidian)
         {
-            
             var newState = state.Increase().AddRobot(blueprint, Robot.Geode);
             if (!seenStates.Contains(newState))
             {
@@ -90,8 +81,43 @@ int GetMaxGeodes(int timeleft, Blueprint blueprint)
             }
             seenStates.Add(newState);
         }
-        var newS = state.Increase();
-        queue.Enqueue(newS);
+        else
+        {
+            if (state.Ore >= blueprint.ObsidianRobotCost.Ore && state.Clay >= blueprint.ObsidianRobotCost.Clay && state.ObsidianRobots < blueprint.GeodeRobotCost.Obsidian)
+            {
+                var newState = state.Increase().AddRobot(blueprint, Robot.Obsidian);
+                if (!seenStates.Contains(newState))
+                {
+                    queue.Enqueue(newState);
+                }
+                seenStates.Add(newState);
+            }
+            else
+            {
+                if (state.Ore >= blueprint.OreRobotCost && state.OreRobots < blueprint.MostOreExpensive())
+                {
+                    var newState = state.Increase().AddRobot(blueprint, Robot.Ore);
+                    if (!seenStates.Contains(newState))
+                    {
+                        queue.Enqueue(newState);
+                    }
+                    seenStates.Add(newState);
+                }
+
+                if (state.Ore >= blueprint.ClayRobotCost && state.ClayRobots < blueprint.ObsidianRobotCost.Clay)
+                {
+                    var newState = state.Increase().AddRobot(blueprint, Robot.Clay);
+                    if (!seenStates.Contains(newState))
+                    {
+                        queue.Enqueue(newState);
+                    }
+                    seenStates.Add(newState);
+                }
+
+                var newS = state.Increase();
+                queue.Enqueue(newS);
+            }
+        }
     }
     return currentBest;
 }
@@ -137,7 +163,8 @@ record State(
         Robot.Ore => this with { Ore = Ore - blueprint.OreRobotCost, OreRobots = OreRobots + 1 },
         Robot.Clay => this with { Ore = Ore - blueprint.ClayRobotCost, ClayRobots = ClayRobots + 1 },
         Robot.Obsidian => this with { Ore = Ore - blueprint.ObsidianRobotCost.Ore, Clay = Clay - blueprint.ObsidianRobotCost.Clay, ObsidianRobots = ObsidianRobots + 1 },
-        Robot.Geode => this with { Ore = Ore - blueprint.GeodeRobotCost.Ore, Obsidian = Obsidian - blueprint.GeodeRobotCost.Obsidian, GeodeRobots = GeodeRobots + 1 }
+        Robot.Geode => this with { Ore = Ore - blueprint.GeodeRobotCost.Ore, Obsidian = Obsidian - blueprint.GeodeRobotCost.Obsidian, GeodeRobots = GeodeRobots + 1 },
+        _ => throw new NotImplementedException()
     };
 
 
@@ -170,6 +197,13 @@ class Blueprint
         ClayRobotCost = clayRobotCost;
         ObsidianRobotCost = obsidianRobotCost;
         GeodeRobotCost = geodeRobotCost;
+    }
+
+    public int MostOreExpensive() 
+    {
+        var ints = new List<int> { OreRobotCost, ClayRobotCost, ObsidianRobotCost.Ore, GeodeRobotCost.Ore };
+
+        return ints.Max();
     }
 }
 
