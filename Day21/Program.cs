@@ -2,7 +2,8 @@
 
 var input = File.ReadAllLines("Day21.txt");
 
-PartOne(input);
+//PartOne(input);
+PartTwo(input);
 
 void PartOne(string[] input)
 {
@@ -13,6 +14,17 @@ void PartOne(string[] input)
     var rootNumber = GetNumber(monkeys, root);
 
     Console.WriteLine($"Part one: {rootNumber}");
+}
+
+void PartTwo(string[] input)
+{
+    var monkeys = ParseMonkeys(input);
+
+    var root = monkeys.First(x => x.Name == "root");
+
+    var path = GetPathToHumn(monkeys, root, "");
+
+    Console.WriteLine($"Part one: {path}");
 }
 
 List<Monkey> ParseMonkeys(string[] input)
@@ -61,11 +73,26 @@ long GetNumber(List<Monkey> monkeys, Monkey monkey)
     return number;
 }
 
+string GetPathToHumn(List<Monkey> monkeys, Monkey monkey, string path)
+{
+    if (monkey.Name == "humn") return path += ", " + monkey.Name;
+    if (monkey.Number.HasValue) return "";
+
+    path += ", " + monkey.Name;
+    var p1 = GetPathToHumn(monkeys, monkeys.First(x => x.Name == monkey.Formula.MonkeyOne), path);
+    var p2 = GetPathToHumn(monkeys, monkeys.First(x => x.Name == monkey.Formula.MonkeyTwo), path);
+
+    if (p1 != "") return p1;
+
+    return p2;
+}
+
 class Monkey
 {
     public string Name { get; }
     public long? Number { get; }
     public Formula? Formula { get; }
+    public string Path { get; set; }
 
     public Monkey(string name, long? number, Formula? formula = null)
     {
