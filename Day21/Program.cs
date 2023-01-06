@@ -22,9 +22,23 @@ void PartTwo(string[] input)
 
     var root = monkeys.First(x => x.Name == "root");
 
+    GetAndSetNumber(monkeys, root);
+
     var path = GetPathToHumn(monkeys, root, "");
 
     Console.WriteLine($"Part one: {path}");
+}
+
+void SetNumbersForAllButHumnAndParents(List<Monkey> monkeys, Monkey root)
+{
+    var humnFree = monkeys.Where(x => x.Name == root.Formula.MonkeyOne || x.Name == root.Formula.MonkeyTwo).First(m => !DoesMonkeyReachHumn(monkeys, m));
+
+    var rootNumber = GetAndSetNumber(monkeys, humnFree);
+
+    var b = monkeys.First(x => x.Formula != null && (x.Formula.MonkeyOne == "humn" || x.Formula.MonkeyTwo == "humn"));
+    var humnBrother = b.Formula.MonkeyOne == "humn" ? b.Formula.MonkeyTwo : b.Formula.MonkeyOne;
+
+    var p2 = GetAndSetNumber(monkeys, monkeys.First(x => x.Name == humnBrother));
 }
 
 List<Monkey> ParseMonkeys(string[] input)
@@ -73,6 +87,41 @@ long GetNumber(List<Monkey> monkeys, Monkey monkey)
     return number;
 }
 
+long? GetAndSetNumber(List<Monkey> monkeys, Monkey monkey)
+{
+    if (monkey.Name == "humn") return null;
+    if (monkey.Number.HasValue) return monkey.Number.Value;
+
+    long? number = 0;
+
+    var leftMonkeyNumber = GetAndSetNumber(monkeys, monkeys.First(x => x.Name == monkey.Formula.MonkeyOne));
+    var rightMonkeyNumber = GetAndSetNumber(monkeys, monkeys.First(x => x.Name == monkey.Formula.MonkeyTwo));
+
+    if (leftMonkeyNumber is null || rightMonkeyNumber is null)
+    {
+        return null;
+    }
+    switch (monkey.Formula.Modifier)
+    {
+        case "+":
+            number = GetAndSetNumber(monkeys, monkeys.First(x => x.Name == monkey.Formula.MonkeyOne)) + GetAndSetNumber(monkeys, monkeys.First(x => x.Name == monkey.Formula.MonkeyTwo)).Value;
+            break;
+        case "-":
+            number = GetAndSetNumber(monkeys, monkeys.First(x => x.Name == monkey.Formula.MonkeyOne)) - GetAndSetNumber(monkeys, monkeys.First(x => x.Name == monkey.Formula.MonkeyTwo));
+            break;
+        case "/":
+            number = GetAndSetNumber(monkeys, monkeys.First(x => x.Name == monkey.Formula.MonkeyOne)) / GetAndSetNumber(monkeys, monkeys.First(x => x.Name == monkey.Formula.MonkeyTwo));
+            break;
+        case "*":
+            number = GetAndSetNumber(monkeys, monkeys.First(x => x.Name == monkey.Formula.MonkeyOne)) * GetAndSetNumber(monkeys, monkeys.First(x => x.Name == monkey.Formula.MonkeyTwo));
+            break;
+        default:
+            break;
+    }
+    monkey.Number = number;
+    return number;
+}
+
 string GetPathToHumn(List<Monkey> monkeys, Monkey monkey, string path)
 {
     if (monkey.Name == "humn") return path += ", " + monkey.Name;
@@ -87,10 +136,21 @@ string GetPathToHumn(List<Monkey> monkeys, Monkey monkey, string path)
     return p2;
 }
 
+bool DoesMonkeyReachHumn(List<Monkey> monkeys, Monkey monkey)
+{
+    if (monkey.Name == "humn") return true;
+    if (monkey.Number.HasValue) return false;
+
+    var p1 = DoesMonkeyReachHumn(monkeys, monkeys.First(x => x.Name == monkey.Formula.MonkeyOne));
+    var p2 = DoesMonkeyReachHumn(monkeys, monkeys.First(x => x.Name == monkey.Formula.MonkeyTwo));
+
+    return p1 || p2;
+}
+
 class Monkey
 {
     public string Name { get; }
-    public long? Number { get; }
+    public long? Number { get; set; }
     public Formula? Formula { get; }
     public string Path { get; set; }
 
