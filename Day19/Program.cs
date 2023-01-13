@@ -195,10 +195,6 @@ class Blueprint
     }
 }
 
-//record Robot(Unit Production, List<Material> Cost);
-
-//record Material(Unit Unit, int Quantity);
-
 enum Robot
 {
     Ore,
