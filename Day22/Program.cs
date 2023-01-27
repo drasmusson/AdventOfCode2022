@@ -1,5 +1,7 @@
 ﻿// https://adventofcode.com/2022/day/22
 
+using System.Data;
+
 var input = File.ReadAllLines("Day22.txt");
 
 PartOne(input);
@@ -10,7 +12,52 @@ void PartOne(string[] input)
     var instructions = input.Skip(input.ToList().IndexOf("") + 1).First();
 }
 
+Coord MoveFinger(Finger finger, Board board, int steps)
+{
+    for (int i = 0; i < steps; i++)
+    {
+        switch (finger.Direction)
+        {
+            case Direction.Right:
+                break;
+            case Direction.Down:
+                break;
+            case Direction.Left:
+                break;
+            case Direction.Up:
+                break;
+            default:
+                break;
+        }
+    }
+
+    return new Coord(0, 0);
+}
+
 record Coord(int X, int Y);
+
+class Finger
+{
+    public Coord Position { get; set; }
+    public Direction Direction { get; private set; }
+
+    public Finger(Coord start)
+    {
+        Position = start;
+        Direction = Direction.Right;
+    }
+
+    public void Turn(string input)
+    {
+        var directionInt = 0;
+        if (input == "R")
+            directionInt = ((int)Direction + 1 + 4) % 4;
+        if (input == "L")
+            directionInt = ((int)Direction - 1 + 4) % 4;
+
+        Direction = (Direction)directionInt;
+    }
+}
 
 class Board
 {
